@@ -1,0 +1,48 @@
+name: Notify Discord – Loop and Learn
+
+on:
+  schedule:
+    - cron: "15 * * * *"  # hver time kl :15
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run parser
+        id: parse
+        run: |
+          python scripts/lnl_check.py > out.txt || true
+          if [ -s out.txt ]; then
+            echo "msg<<EOF" >> $GITHUB_OUTPUT
+            cat out.txt >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Persist state
+        if: steps.parse.outputs.msg
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(state): update LnL last seen"
+          file_pattern: ".lnl_last.json"
+
+      - name: Send to Discord
+        if: steps.parse.outputs.msg
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          MSG: ${{ steps.parse.outputs.msg }}
+        run: |
+          printf '{"content": "%s"}' "$(python - <<'PY'
+import os, json, sys
+s=os.environ.get("MSG","").replace("\\","\\\\").replace('"','\\"')
+s=s.replace('\n','\\n')
+print(s)
+PY
+)" | curl -sS -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"
