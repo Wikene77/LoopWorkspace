@@ -1,13 +1,15 @@
-name: Notify Discord – Loop and Learn
+name: Notify Discord - Loop and Learn
 
 on:
   schedule:
-    - cron: "15 * * * *"  # hver time kl :15
+    - cron: "15 * * * *"
   workflow_dispatch: {}
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -21,9 +23,9 @@ jobs:
         run: |
           python scripts/lnl_check.py > out.txt || true
           if [ -s out.txt ]; then
-            echo "msg<<EOF" >> $GITHUB_OUTPUT
-            cat out.txt >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            echo "msg<<EOF" >> "$GITHUB_OUTPUT"
+            cat out.txt >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Persist state
@@ -39,10 +41,5 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           MSG: ${{ steps.parse.outputs.msg }}
         run: |
-          printf '{"content": "%s"}' "$(python - <<'PY'
-import os, json, sys
-s=os.environ.get("MSG","").replace("\\","\\\\").replace('"','\\"')
-s=s.replace('\n','\\n')
-print(s)
-PY
-)" | curl -sS -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"
+          echo "$MSG" | jq -Rs '{content: .}' \
+          | curl -sS -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"
