@@ -1,0 +1,52 @@
+name: Notify Discord – LoopWorkspace
+
+on:
+  schedule:
+    - cron: "7 * * * *"   # hver time kl :07
+  workflow_dispatch: {}    # gjør at du kan teste manuelt
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run checker
+        id: run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/loopws_check.py > out.txt || true
+          if [ -s out.txt ]; then
+            echo "msg<<EOF" >> $GITHUB_OUTPUT
+            cat out.txt >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Persist state
+        if: steps.run.outputs.msg
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(state): update LoopWorkspace last seen"
+          file_pattern: ".loopws_last.json"
+
+      - name: Send to Discord
+        if: steps.run.outputs.msg
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          MSG: ${{ steps.run.outputs.msg }}
+        run: |
+          printf '{"content": "%s"}' "$(python - <<'PY'
+import os, json, sys
+s=os.environ.get("MSG","").replace("\\","\\\\").replace('"','\\"')
+s=s.replace('\n','\\n')
+print(s)
+PY
+)" | curl -sS -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"
