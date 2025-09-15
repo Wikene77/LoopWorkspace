@@ -1,15 +1,15 @@
-name: Notify Discord - LoopWorkspace
+name: Notify Discord - Loop and Learn
 
 on:
   schedule:
-    - cron: "7 * * * *"   # hver time :07
+    - cron: "15 * * * *"
   workflow_dispatch: {}
 
 jobs:
   check:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # må være write for auto-commit av statefil
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -18,12 +18,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run checker
-        id: run
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run parser
+        id: parse
         run: |
-          python scripts/loopws_check.py > out.txt || true
+          python scripts/lnl_check.py > out.txt || true
           if [ -s out.txt ]; then
             echo "msg<<EOF" >> "$GITHUB_OUTPUT"
             cat out.txt >> "$GITHUB_OUTPUT"
@@ -31,17 +29,17 @@ jobs:
           fi
 
       - name: Persist state
-        if: steps.run.outputs.msg
+        if: steps.parse.outputs.msg
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore(state): update LoopWorkspace last seen"
-          file_pattern: ".loopws_last.json"
+          commit_message: "chore(state): update LnL last seen"
+          file_pattern: ".lnl_last.json"
 
       - name: Send to Discord
-        if: steps.run.outputs.msg
+        if: steps.parse.outputs.msg
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          MSG: ${{ steps.run.outputs.msg }}
+          MSG: ${{ steps.parse.outputs.msg }}
         run: |
           echo "$MSG" | jq -Rs '{content: .}' \
           | curl -sS -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"
