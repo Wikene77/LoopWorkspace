@@ -1,4 +1,4 @@
-import os, json, re
+import os, json
 from urllib.request import Request, urlopen
 
 API_RELEASE = "https://api.github.com/repos/LoopKit/LoopWorkspace/releases/latest"
@@ -21,25 +21,25 @@ def save_state(state):
 
 def main():
     token = os.environ.get("GITHUB_TOKEN", "")
-    # Prøv release først
+
+    tag, url, src = None, None, None
     try:
         rel = json.loads(fetch(API_RELEASE, token))
         tag = rel.get("tag_name") or rel.get("name")
         url = rel.get("html_url")
         src = "release"
     except Exception:
-        rel = {}
-        tag = None
-        url = None
-        src = None
+        pass
 
-    # Fallback: første tag
     if not tag:
-        tags = json.loads(fetch(API_TAGS, token))
-        if isinstance(tags, list) and tags:
-            tag = tags[0].get("name")
-            url = f"https://github.com/LoopKit/LoopWorkspace/tree/{tag}"
-            src = "tag"
+        try:
+            tags = json.loads(fetch(API_TAGS, token))
+            if isinstance(tags, list) and tags:
+                tag = tags[0].get("name")
+                url = f"https://github.com/LoopKit/LoopWorkspace/tree/{tag}"
+                src = "tag"
+        except Exception:
+            pass
 
     if not tag:
         print("::notice title=LoopWorkspace::Fant ingen release/tag.")
