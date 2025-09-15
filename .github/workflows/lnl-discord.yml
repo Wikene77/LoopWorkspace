@@ -2,7 +2,7 @@ name: Notify Discord - Loop and Learn
 
 on:
   schedule:
-    - cron: "15 * * * *"
+    - cron: "15 * * * *"  # hver time kl :15
   workflow_dispatch: {}
 
 jobs:
