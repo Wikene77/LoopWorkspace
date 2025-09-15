@@ -10,11 +10,9 @@ def fetch(url):
         return r.read().decode("utf-8", errors="ignore")
 
 def extract_latest(html):
-    # Prøv å finne "Loop X.Y(.Z) was released on <dato>"
     m = re.search(r"(Loop\s+\d+\.\d+(?:\.\d+)?)\s+was released on\s+([A-Za-z0-9 ,.-]+)", html, re.I)
     if m:
         return f"{m.group(1).strip()} | {m.group(2).strip()}"
-    # fallback: første "Loop 3.x"
     m2 = re.search(r"(Loop\s+\d+\.\d+(?:\.\d+)?)", html)
     return m2.group(1).strip() if m2 else None
 
