@@ -26,12 +26,11 @@ def main():
     html = fetch(URL)
     latest = extract_latest(html)
     if not latest:
-        print("::notice title=LnL::Ingen versjon funnet.")
-        return
+        return  # stille hvis vi ikke fant noe
     state = load_state()
     if state.get("latest") == latest:
-        print("::notice title=LnL::Ingen endring.")
-        return
+        return  # stille ved ingen endring
+    # Skriv KUN ved endring
     print(f"**Loop and Learn – nye versjonsnotater:** {latest}\n{URL}")
     state["latest"] = latest
     save_state(state)
