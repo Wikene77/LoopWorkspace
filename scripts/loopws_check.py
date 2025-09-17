@@ -23,6 +23,7 @@ def main():
     token = os.environ.get("GITHUB_TOKEN", "")
 
     tag, url, src = None, None, None
+    # Prøv release
     try:
         rel = json.loads(fetch(API_RELEASE, token))
         tag = rel.get("tag_name") or rel.get("name")
@@ -30,7 +31,7 @@ def main():
         src = "release"
     except Exception:
         pass
-
+    # Fallback: første tag
     if not tag:
         try:
             tags = json.loads(fetch(API_TAGS, token))
@@ -42,16 +43,14 @@ def main():
             pass
 
     if not tag:
-        print("::notice title=LoopWorkspace::Fant ingen release/tag.")
-        return
+        return  # stille hvis vi ikke fant noe
 
     state = load_state()
     if state.get("last_tag") == tag:
-        print("::notice title=LoopWorkspace::Ingen endring.")
-        return
+        return  # stille hvis ingen endring
 
-    msg = f"**LoopWorkspace – ny {src}: {tag}**\n{url}"
-    print(msg)
+    # Skriv KUN ved endring (workflow plukker opp og poster til Discord)
+    print(f"**LoopWorkspace – ny {src}: {tag}**\n{url}")
     state["last_tag"] = tag
     save_state(state)
 
