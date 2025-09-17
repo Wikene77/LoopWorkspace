@@ -38,10 +38,17 @@ jobs:
           file_pattern: ".loopws_last.json"
 
       - name: Send to Discord
-        if: steps.run.outputs.msg
+        if: steps.run.outputs.msg || steps.parse.outputs.msg
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          MSG: ${{ steps.run.outputs.msg }}
+          MSG: ${{ steps.run.outputs.msg || steps.parse.outputs.msg }}
         run: |
-          echo "$MSG" | jq -Rs '{content: .}' \
+          title="Loop oppdatering"
+          desc="$MSG"
+          url=""
+          color=3066993   # grønnaktig embed-farge
+
+          jq -n --arg t "$title" --arg d "$desc" --arg u "$url" --argjson c $color \
+            '{embeds:[{title:$t, description:$d, url:$u, color:$c}]}' \
           | curl -sS -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK_URL"
+
